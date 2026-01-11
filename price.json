@@ -17,7 +17,7 @@
   },
   "special_dates": {
     "01": [
-      { "from": 1, "to": 6, "price": 400 },
+      { "from": 1, "to": 6, "price": 400 }
     ]
     "08": [
       { "from": 14, "to": 16, "price": 93 },
