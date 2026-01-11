@@ -172,7 +172,60 @@
       color:var(--muted);
       font-size:13px;
     }
+/* gallery limitata */
+.photo.hidden {
+  display: none;
+}
+
+.more-overlay {
+  position: relative;
+}
+
+.more-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+}
+
+.more-btn {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  height: 48px;
+  width: 160px;
+  background: #fff;
+  border: none;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+  z-index: 2;
+  box-shadow: 0 10px 25px rgba(0,0,0,.25);
+}
+
+.more-btn:hover {
+  background: #f3f4f6;
+}
+
+
   </style>
+
+<script>
+  function showAllPhotos() {
+    document.querySelectorAll(".photo.hidden").forEach(el => {
+      el.style.display = "block";
+    });
+
+    // rimuove overlay e bottone
+    const overlay = document.querySelector(".more-overlay");
+    if (overlay) {
+      overlay.classList.remove("more-overlay");
+      const btn = overlay.querySelector(".more-btn");
+      if (btn) btn.remove();
+    }
+  }
+</script>
+
 </head>
 
 <body>
@@ -212,7 +265,7 @@
       <div class="photo"><img src="img/3.jpg" alt="Cucina" /></div>
       <div class="photo"><img src="img/4.jpg" alt="Camera" /></div>
       <div class="photo"><img src="img/5.jpg" alt="Esterni" /></div>
-      <div class="photo"><img src="img/6.jpg" alt="Cucina" /></div>
+      
       <!-- sesta foto con overlay -->
   	<div class="photo more-overlay">
     	    <img src="img/house-6.jpg" alt="">
@@ -221,6 +274,7 @@
     		</button>
   	</div>
 	<!-- FOTO NASCOSTE -->
+      <div class="photo hidden"><img src="img/6.jpg" alt="Cucina" /></div>
       <div class="photo hidden"><img src="img/7.jpg" alt="Camera" /></div>
       <div class="photo hidden"><img src="img/8.jpg" alt="Esterni" /></div>
       <div class="photo hidden"><img src="img/10.jpg" alt="Cucina" /></div>
