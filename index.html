@@ -380,9 +380,7 @@
         (data.default != null ? data.default : null);
 
       el.textContent = formatPrice(price, data.currency);
-      unitEl.textContent = data.unit || "/ notte";
-
-      dbg.textContent = `OK (mese ${month})`;
+      unitEl.textContent = data.unit || "/ notte per persona";
     }catch(err){
       el.textContent = "—";
       unitEl.textContent = "/ notte";
