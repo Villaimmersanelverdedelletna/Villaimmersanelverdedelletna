@@ -638,7 +638,7 @@ It is also possible to rent three beds on a boat by the pool (see “Etna boat h
 
   let currentIndex = GALLERY_START;
 
-  const BATCH_SIZE = 30;
+  const BATCH_SIZE = 10;
   let nextToRender = GALLERY_START;
   let gridBuilt = false;
 
@@ -708,22 +708,24 @@ It is also possible to rent three beds on a boat by the pool (see “Etna boat h
     }
   }
 
-  function openGallery(scrollToIndex = 6){
-    buildGridOnce();
+ function openGallery(scrollToIndex = 6){
+  // RESET ogni volta che apri (così applica sempre la nuova GALLERY_END)
+  resetGalleryGrid();
+  buildGridOnce();
 
-    const modal = document.getElementById("galleryModal");
-    modal.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
+  const modal = document.getElementById("galleryModal");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
 
-    // assicurati che l'indice richiesto sia renderizzato
-    while (nextToRender <= scrollToIndex && nextToRender <= GALLERY_END){
-      renderBatch();
-    }
-
-    const grid = document.getElementById("gmGrid");
-    const target = grid.querySelector(`.gm-item[data-idx="${scrollToIndex}"]`);
-    if (target) target.scrollIntoView({behavior:"smooth", block:"start"});
+  while (nextToRender <= scrollToIndex && nextToRender <= GALLERY_END){
+    renderBatch();
   }
+
+  const grid = document.getElementById("gmGrid");
+  const target = grid.querySelector(`.gm-item[data-idx="${scrollToIndex}"]`);
+  if (target) target.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
 
   function closeGallery(){
     document.getElementById("galleryModal").setAttribute("aria-hidden", "true");
@@ -828,4 +830,5 @@ It is also possible to rent three beds on a boat by the pool (see “Etna boat h
   </script>
 </body>
 </html>
+
 
