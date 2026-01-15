@@ -338,12 +338,30 @@
       cursor: pointer;
       position: relative;
     }
-    .gm-item img{
-      width: 100%;
-      height: 220px;
-      object-fit: cover;
-      display: block;
-    }
+    /* card miniatura con ratio fisso */
+.gm-item{
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f3f4f6;
+  cursor: pointer;
+}
+
+/* contenitore ratio 4:3 */
+.gm-thumb{
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  background: #f3f4f6;
+}
+
+/* mostra TUTTA la foto (senza tagli): contain */
+.gm-thumb img{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #f3f4f6;
+}
+
     @media (max-width: 520px){
       .gm-item img{height: 240px;}
     }
@@ -470,9 +488,8 @@
 
   <!-- il 6° riquadro è SOLO il bottone (da qui in poi “nascoste”) -->
   <div class="photo more-overlay">
-    <img src="img/5.jpg" alt="Anteprima" />
-    <button class="more-btn" type="button" onclick="openGallery(6)">
-      Mostra tutte le foto
+      <button class="more-btn" type="button" onclick="openGallery(6)">
+      Show more
     </button>
   </div>
 </section>
@@ -490,6 +507,18 @@
         </div>
 
         <div class="gm-grid" id="gmGrid"></div>
+	<div style="padding: 0 14px 14px;">
+  <button id="loadMoreBtn" type="button" style="
+    width:100%;
+    height:44px;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:#fff;
+    font-weight:900;
+    cursor:pointer;">
+    Carica altre foto
+  </button>
+</div>
       </div>
     </div>
 
@@ -557,21 +586,17 @@
   </footer>
 
   <script>
-    // ====== CONFIG ======
   const GALLERY_START = 1;
   const GALLERY_END = 188;
   const IMG_FOLDER = "img";
 
-  // 1..12 => jpg | 13..188 => jpeg
   function imgSrc(i){
     const ext = (i <= 12) ? "jpg" : "jpeg";
     return `${IMG_FOLDER}/${i}.${ext}`;
   }
 
-  // ====== STATE ======
   let currentIndex = GALLERY_START;
 
-  // rendering a blocchi (stile Airbnb)
   const BATCH_SIZE = 30;
   let nextToRender = GALLERY_START;
   let gridBuilt = false;
@@ -579,6 +604,8 @@
   function renderBatch(){
     const grid = document.getElementById("gmGrid");
     if (!grid) return;
+
+    if (nextToRender > GALLERY_END) return;
 
     const frag = document.createDocumentFragment();
     const end = Math.min(nextToRender + BATCH_SIZE - 1, GALLERY_END);
@@ -588,19 +615,33 @@
       cell.className = "gm-item";
       cell.setAttribute("data-idx", String(i));
 
+      const thumb = document.createElement("div");
+      thumb.className = "gm-thumb";
+
       const im = document.createElement("img");
       im.loading = "lazy";
       im.decoding = "async";
       im.src = imgSrc(i);
       im.alt = `Foto ${i}`;
 
-      cell.appendChild(im);
+      thumb.appendChild(im);
+      cell.appendChild(thumb);
+
       cell.addEventListener("click", () => openViewer(i));
       frag.appendChild(cell);
     }
 
     grid.appendChild(frag);
     nextToRender = end + 1;
+
+    // disattiva bottone se finito
+    const btn = document.getElementById("loadMoreBtn");
+    if (btn && nextToRender > GALLERY_END){
+      btn.textContent = "Hai visto tutte le foto";
+      btn.disabled = true;
+      btn.style.cursor = "default";
+      btn.style.opacity = "0.6";
+    }
   }
 
   function buildGridOnce(){
@@ -608,33 +649,36 @@
     gridBuilt = true;
 
     const grid = document.getElementById("gmGrid");
-    if (!grid) return;
+    const btn = document.getElementById("loadMoreBtn");
 
-    // prima tranche
-    renderBatch();
+    renderBatch(); // prime 30
 
-    // infinite scroll: quando arrivi quasi in fondo carica altro
+    // infinite scroll robusto
     grid.addEventListener("scroll", () => {
-      const nearBottom = grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 600;
-      if (nearBottom && nextToRender <= GALLERY_END){
+      const nearBottom = grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 300;
+      if (nearBottom){
         renderBatch();
       }
     }, { passive: true });
+
+    // fallback bottone
+    if (btn){
+      btn.addEventListener("click", () => renderBatch());
+    }
   }
 
-  function openGallery(scrollToIndex = 1){
+  function openGallery(scrollToIndex = 6){
     buildGridOnce();
 
     const modal = document.getElementById("galleryModal");
     modal.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
 
-    // assicura che l'indice richiesto sia stato renderizzato
+    // assicurati che l'indice richiesto sia renderizzato
     while (nextToRender <= scrollToIndex && nextToRender <= GALLERY_END){
       renderBatch();
     }
 
-    // scroll verso la foto richiesta
     const grid = document.getElementById("gmGrid");
     const target = grid.querySelector(`.gm-item[data-idx="${scrollToIndex}"]`);
     if (target) target.scrollIntoView({behavior:"smooth", block:"start"});
@@ -645,7 +689,6 @@
     document.body.style.overflow = "";
   }
 
-  // ====== VIEWER ======
   function openViewer(i){
     currentIndex = i;
     const viewer = document.getElementById("viewer");
@@ -672,7 +715,6 @@
     openViewer(next);
   }
 
-  // ====== ESC + frecce ======
   document.addEventListener("keydown", (e) => {
     const viewerOpen = document.getElementById("viewer")?.getAttribute("aria-hidden") === "false";
     const modalOpen = document.getElementById("galleryModal")?.getAttribute("aria-hidden") === "false";
@@ -681,27 +723,11 @@
       if (viewerOpen) closeViewer();
       else if (modalOpen) closeGallery();
     }
-
     if (viewerOpen){
       if (e.key === "ArrowLeft") viewerPrev();
       if (e.key === "ArrowRight") viewerNext();
     }
   });
-
-    // ====== KEYBOARD ======
-    document.addEventListener("keydown", (e) => {
-      const viewerOpen = document.getElementById("viewer")?.getAttribute("aria-hidden") === "false";
-      const modalOpen = document.getElementById("galleryModal")?.getAttribute("aria-hidden") === "false";
-
-      if (e.key === "Escape"){
-        if (viewerOpen) closeViewer();
-        else if (modalOpen) closeGallery();
-      }
-      if (viewerOpen){
-        if (e.key === "ArrowLeft") viewerPrev();
-        if (e.key === "ArrowRight") viewerNext();
-      }
-    });
 
     // ====== YEAR + PRICE (tuo codice) ======
     const LOCAL_PRICE_JSON = "price.json";
