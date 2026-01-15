@@ -452,7 +452,7 @@
         </a>
       </div>
 
-      <div class="price-pill" title="Prezzo base">
+      <div class="price-pill" title="Standard price">
         <span class="dot"></span>
         <span id="priceValue">—</span>
         <small id="priceUnit">/ night per person</small>
@@ -774,10 +774,10 @@
           (data.default != null ? data.default : null);
 
         el.textContent = formatPrice(price, data.currency);
-        unitEl.textContent = data.unit || "/ notte per persona";
+        unitEl.textContent = data.unit || "/ night per person";
       }catch(err){
         el.textContent = "—";
-        unitEl.textContent = "/ notte";
+        unitEl.textContent = "/ night per person";
         dbg.textContent = String(err.message || err);
         console.warn(err);
       }
