@@ -459,19 +459,24 @@
       </div>
     </section>
 
-    <!-- ===== GALLERY PREVIEW (6 tile) ===== -->
-    <section class="gallery" aria-label="Photo gallery" id="galleryPreview">
-      <div class="photo g1"><img src="img/1.jpg" alt="Foto 1" /></div>
-      <div class="photo"><img src="img/2.jpg" alt="Foto 2" /></div>
-      <div class="photo"><img src="img/3.jpg" alt="Foto 3" /></div>
-      <div class="photo"><img src="img/4.jpg" alt="Foto 4" /></div>
-      <div class="photo"><img src="img/5.jpg" alt="Foto 5" /></div>
 
-      <div class="photo more-overlay">
-        <img src="img/6.jpg" alt="Foto 6" />
-        <button class="more-btn" type="button" onclick="openGallery(1)">Mostra tutte le foto</button>
-      </div>
-    </section>
+    <!-- ===== GALLERY PREVIEW (5 foto + bottone) ===== -->
+<section class="gallery" aria-label="Photo gallery" id="galleryPreview">
+  <div class="photo g1"><img src="img/1.jpg" alt="Foto 1" /></div>
+  <div class="photo"><img src="img/2.jpg" alt="Foto 2" /></div>
+  <div class="photo"><img src="img/3.jpg" alt="Foto 3" /></div>
+  <div class="photo"><img src="img/4.jpg" alt="Foto 4" /></div>
+  <div class="photo"><img src="img/5.jpg" alt="Foto 5" /></div>
+
+  <!-- il 6° riquadro è SOLO il bottone (da qui in poi “nascoste”) -->
+  <div class="photo more-overlay">
+    <img src="img/5.jpg" alt="Anteprima" />
+    <button class="more-btn" type="button" onclick="openGallery(6)">
+      Mostra tutte le foto
+    </button>
+  </div>
+</section>
+
 
     <!-- ===== MODAL “Mostra tutte le foto” ===== -->
     <div class="gallery-modal" id="galleryModal" aria-hidden="true">
@@ -552,92 +557,136 @@
   </footer>
 
   <script>
-    // ====== CONFIG GALLERY ======
-    const GALLERY_START = 1;
-    const GALLERY_END = 188;
-    const IMG_FOLDER = "img";
+    // ====== CONFIG ======
+  const GALLERY_START = 1;
+  const GALLERY_END = 188;
+  const IMG_FOLDER = "img";
 
-    // 1..12 => jpg | 13..188 => jpeg
-    function imgSrc(i){
-      const ext = (i <= 12) ? "jpg" : "jpeg";
-      return `${IMG_FOLDER}/${i}.${ext}`;
+  // 1..12 => jpg | 13..188 => jpeg
+  function imgSrc(i){
+    const ext = (i <= 12) ? "jpg" : "jpeg";
+    return `${IMG_FOLDER}/${i}.${ext}`;
+  }
+
+  // ====== STATE ======
+  let currentIndex = GALLERY_START;
+
+  // rendering a blocchi (stile Airbnb)
+  const BATCH_SIZE = 30;
+  let nextToRender = GALLERY_START;
+  let gridBuilt = false;
+
+  function renderBatch(){
+    const grid = document.getElementById("gmGrid");
+    if (!grid) return;
+
+    const frag = document.createDocumentFragment();
+    const end = Math.min(nextToRender + BATCH_SIZE - 1, GALLERY_END);
+
+    for(let i = nextToRender; i <= end; i++){
+      const cell = document.createElement("div");
+      cell.className = "gm-item";
+      cell.setAttribute("data-idx", String(i));
+
+      const im = document.createElement("img");
+      im.loading = "lazy";
+      im.decoding = "async";
+      im.src = imgSrc(i);
+      im.alt = `Foto ${i}`;
+
+      cell.appendChild(im);
+      cell.addEventListener("click", () => openViewer(i));
+      frag.appendChild(cell);
     }
 
-    // ====== STATE ======
-    let currentIndex = GALLERY_START;
+    grid.appendChild(frag);
+    nextToRender = end + 1;
+  }
 
-    // ====== BUILD GRID ONCE ======
-    function buildGrid(){
-      const grid = document.getElementById("gmGrid");
-      if (!grid || grid.dataset.built === "1") return;
+  function buildGridOnce(){
+    if (gridBuilt) return;
+    gridBuilt = true;
 
-      const frag = document.createDocumentFragment();
+    const grid = document.getElementById("gmGrid");
+    if (!grid) return;
 
-      for(let i = GALLERY_START; i <= GALLERY_END; i++){
-        const cell = document.createElement("div");
-        cell.className = "gm-item";
-        cell.setAttribute("data-idx", String(i));
+    // prima tranche
+    renderBatch();
 
-        const im = document.createElement("img");
-        im.loading = "lazy";
-        im.src = imgSrc(i);
-        im.alt = `Foto ${i}`;
-
-        cell.appendChild(im);
-        cell.addEventListener("click", () => openViewer(i));
-        frag.appendChild(cell);
+    // infinite scroll: quando arrivi quasi in fondo carica altro
+    grid.addEventListener("scroll", () => {
+      const nearBottom = grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 600;
+      if (nearBottom && nextToRender <= GALLERY_END){
+        renderBatch();
       }
+    }, { passive: true });
+  }
 
-      grid.appendChild(frag);
-      grid.dataset.built = "1";
+  function openGallery(scrollToIndex = 1){
+    buildGridOnce();
+
+    const modal = document.getElementById("galleryModal");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+
+    // assicura che l'indice richiesto sia stato renderizzato
+    while (nextToRender <= scrollToIndex && nextToRender <= GALLERY_END){
+      renderBatch();
     }
 
-    function openGallery(scrollToIndex = 1){
-      buildGrid();
+    // scroll verso la foto richiesta
+    const grid = document.getElementById("gmGrid");
+    const target = grid.querySelector(`.gm-item[data-idx="${scrollToIndex}"]`);
+    if (target) target.scrollIntoView({behavior:"smooth", block:"start"});
+  }
 
-      const modal = document.getElementById("galleryModal");
-      modal.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
+  function closeGallery(){
+    document.getElementById("galleryModal").setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  }
 
-      const grid = document.getElementById("gmGrid");
-      const target = grid.querySelector(`.gm-item[data-idx="${scrollToIndex}"]`);
-      if (target) target.scrollIntoView({behavior:"smooth", block:"start"});
+  // ====== VIEWER ======
+  function openViewer(i){
+    currentIndex = i;
+    const viewer = document.getElementById("viewer");
+    viewer.setAttribute("aria-hidden", "false");
+
+    const img = document.getElementById("viewerImg");
+    img.src = imgSrc(i);
+    img.alt = `Foto ${i}`;
+
+    document.getElementById("viewerCount").textContent = `${i} / ${GALLERY_END}`;
+  }
+
+  function closeViewer(){
+    document.getElementById("viewer").setAttribute("aria-hidden", "true");
+  }
+
+  function viewerPrev(){
+    const next = (currentIndex - 1 < GALLERY_START) ? GALLERY_END : (currentIndex - 1);
+    openViewer(next);
+  }
+
+  function viewerNext(){
+    const next = (currentIndex + 1 > GALLERY_END) ? GALLERY_START : (currentIndex + 1);
+    openViewer(next);
+  }
+
+  // ====== ESC + frecce ======
+  document.addEventListener("keydown", (e) => {
+    const viewerOpen = document.getElementById("viewer")?.getAttribute("aria-hidden") === "false";
+    const modalOpen = document.getElementById("galleryModal")?.getAttribute("aria-hidden") === "false";
+
+    if (e.key === "Escape"){
+      if (viewerOpen) closeViewer();
+      else if (modalOpen) closeGallery();
     }
 
-    function closeGallery(){
-      const modal = document.getElementById("galleryModal");
-      modal.setAttribute("aria-hidden", "true");
-      document.body.style.overflow = "";
+    if (viewerOpen){
+      if (e.key === "ArrowLeft") viewerPrev();
+      if (e.key === "ArrowRight") viewerNext();
     }
-
-    // ====== VIEWER ======
-    function openViewer(i){
-      currentIndex = i;
-
-      const viewer = document.getElementById("viewer");
-      viewer.setAttribute("aria-hidden", "false");
-
-      const img = document.getElementById("viewerImg");
-      img.src = imgSrc(i);
-      img.alt = `Foto ${i}`;
-
-      document.getElementById("viewerCount").textContent = `${i} / ${GALLERY_END}`;
-    }
-
-    function closeViewer(){
-      const viewer = document.getElementById("viewer");
-      viewer.setAttribute("aria-hidden", "true");
-    }
-
-    function viewerPrev(){
-      const next = (currentIndex - 1 < GALLERY_START) ? GALLERY_END : (currentIndex - 1);
-      openViewer(next);
-    }
-
-    function viewerNext(){
-      const next = (currentIndex + 1 > GALLERY_END) ? GALLERY_START : (currentIndex + 1);
-      openViewer(next);
-    }
+  });
 
     // ====== KEYBOARD ======
     document.addEventListener("keydown", (e) => {
