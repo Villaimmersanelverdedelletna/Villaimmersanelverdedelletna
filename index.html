@@ -633,9 +633,12 @@
   const IMG_FOLDER = "img";
 
   function imgSrc(i){
-    const ext = (i <= 12) ? "jpg" : "jpeg";
-    return `${IMG_FOLDER}/${i}.${ext}`;
-  }
+  // prima regola: 1..12 sono jpg
+  if (i <= 12) return `${IMG_FOLDER}/${i}.jpg`;
+  // dal 13 in poi prova jpeg (principale)
+  return `${IMG_FOLDER}/${i}.jpeg`;
+}
+
 
   let currentIndex = GALLERY_START;
 
