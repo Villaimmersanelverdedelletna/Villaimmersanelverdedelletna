@@ -1,6 +1,6 @@
 {
   "currency": "EUR",
-  "unit": "/ notte",
+  "unit": "/ night per person",
   "default": 75,
   "monthly": {
     "01": 44,
@@ -28,5 +28,6 @@
     ]
   }
 }
+
 
 
