@@ -624,37 +624,35 @@ It is also possible to rent three beds on a boat by the pool (see “Etna boat h
   </footer>
 
   <script>
+  // ====== CONFIG ======
   const GALLERY_START = 1;
-  const GALLERY_END = 188;
+  const GALLERY_END = 188;     // riduci qui se vuoi (es. 60)
   const IMG_FOLDER = "img";
 
+  // 1..12 => jpg | 13..188 => jpeg
   function imgSrc(i){
-  // prima regola: 1..12 sono jpg
-  if (i <= 12) return `${IMG_FOLDER}/${i}.jpg`;
-  // dal 13 in poi prova jpeg (principale)
-  return `${IMG_FOLDER}/${i}.jpeg`;
-}
+    const ext = (i <= 12) ? "jpg" : "jpeg";
+    return `${IMG_FOLDER}/${i}.${ext}`;
+  }
 
-
+  // ====== STATE ======
   let currentIndex = GALLERY_START;
-
-  const BATCH_SIZE = 10;
+  const BATCH_SIZE = 30;       // quante per volta
   let nextToRender = GALLERY_START;
   let gridBuilt = false;
 
   function renderBatch(){
     const grid = document.getElementById("gmGrid");
     if (!grid) return;
-
     if (nextToRender > GALLERY_END) return;
 
     const frag = document.createDocumentFragment();
     const end = Math.min(nextToRender + BATCH_SIZE - 1, GALLERY_END);
 
-    for(let i = nextToRender; i <= end; i++){
+    for (let i = nextToRender; i <= end; i++){
       const cell = document.createElement("div");
       cell.className = "gm-item";
-      cell.setAttribute("data-idx", String(i));
+      cell.dataset.idx = i;
 
       const thumb = document.createElement("div");
       thumb.className = "gm-thumb";
@@ -665,23 +663,32 @@ It is also possible to rent three beds on a boat by the pool (see “Etna boat h
       im.src = imgSrc(i);
       im.alt = `Foto ${i}`;
 
+      // fallback: se jpeg non esiste prova jpg (utile se qualche file è rimasto jpg)
+      im.onerror = () => {
+        if (i > 12 && !im.dataset.triedJpg){
+          im.dataset.triedJpg = "1";
+          im.src = `${IMG_FOLDER}/${i}.jpg`;
+          return;
+        }
+        cell.style.display = "none"; // se non esiste, nascondi la tile
+      };
+
       thumb.appendChild(im);
       cell.appendChild(thumb);
-
       cell.addEventListener("click", () => openViewer(i));
+
       frag.appendChild(cell);
     }
 
     grid.appendChild(frag);
     nextToRender = end + 1;
 
-    // disattiva bottone se finito
     const btn = document.getElementById("loadMoreBtn");
     if (btn && nextToRender > GALLERY_END){
       btn.textContent = "Hai visto tutte le foto";
       btn.disabled = true;
-      btn.style.cursor = "default";
       btn.style.opacity = "0.6";
+      btn.style.cursor = "default";
     }
   }
 
@@ -690,62 +697,73 @@ It is also possible to rent three beds on a boat by the pool (see “Etna boat h
     gridBuilt = true;
 
     const grid = document.getElementById("gmGrid");
-    const btn = document.getElementById("loadMoreBtn");
+    if (!grid) return;
 
-    renderBatch(); // prime 30
+    renderBatch();
 
-    // infinite scroll robusto
+    // infinite scroll: carica quando arrivi vicino al fondo
     grid.addEventListener("scroll", () => {
       const nearBottom = grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 300;
-      if (nearBottom){
-        renderBatch();
-      }
+      if (nearBottom) renderBatch();
     }, { passive: true });
 
-    // fallback bottone
-    if (btn){
-      btn.addEventListener("click", () => renderBatch());
+    // bottone carica altre (se presente)
+    const loadBtn = document.getElementById("loadMoreBtn");
+    if (loadBtn){
+      loadBtn.addEventListener("click", () => renderBatch());
     }
   }
 
- function openGallery(scrollToIndex = 6){
-  // RESET ogni volta che apri (così applica sempre la nuova GALLERY_END)
-  resetGalleryGrid();
-  buildGridOnce();
+  // ====== OPEN/CLOSE MODAL ======
+  function openGallery(scrollToIndex = 6){
+    buildGridOnce();
 
-  const modal = document.getElementById("galleryModal");
-  modal.setAttribute("aria-hidden", "false");
-  document.body.style.overflow = "hidden";
+    const modal = document.getElementById("galleryModal");
+    if (!modal){
+      console.error("galleryModal non trovato");
+      return;
+    }
 
-  while (nextToRender <= scrollToIndex && nextToRender <= GALLERY_END){
-    renderBatch();
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+
+    // assicura che la foto richiesta esista nella griglia
+    while (nextToRender <= scrollToIndex && nextToRender <= GALLERY_END){
+      renderBatch();
+    }
+
+    const grid = document.getElementById("gmGrid");
+    const target = grid?.querySelector(`.gm-item[data-idx="${scrollToIndex}"]`);
+    if (target) target.scrollIntoView({ behavior:"smooth", block:"start" });
   }
 
-  const grid = document.getElementById("gmGrid");
-  const target = grid.querySelector(`.gm-item[data-idx="${scrollToIndex}"]`);
-  if (target) target.scrollIntoView({behavior:"smooth", block:"start"});
-}
-
-
   function closeGallery(){
-    document.getElementById("galleryModal").setAttribute("aria-hidden", "true");
+    const modal = document.getElementById("galleryModal");
+    if (modal) modal.setAttribute("aria-hidden", "true");
     document.body.style.overflow = "";
   }
 
+  // ====== VIEWER ======
   function openViewer(i){
     currentIndex = i;
     const viewer = document.getElementById("viewer");
+    if (!viewer) return;
+
     viewer.setAttribute("aria-hidden", "false");
 
     const img = document.getElementById("viewerImg");
-    img.src = imgSrc(i);
-    img.alt = `Foto ${i}`;
+    if (img){
+      img.src = imgSrc(i);
+      img.alt = `Foto ${i}`;
+    }
 
-    document.getElementById("viewerCount").textContent = `${i} / ${GALLERY_END}`;
+    const count = document.getElementById("viewerCount");
+    if (count) count.textContent = `${i} / ${GALLERY_END}`;
   }
 
   function closeViewer(){
-    document.getElementById("viewer").setAttribute("aria-hidden", "true");
+    const viewer = document.getElementById("viewer");
+    if (viewer) viewer.setAttribute("aria-hidden", "true");
   }
 
   function viewerPrev(){
@@ -758,6 +776,7 @@ It is also possible to rent three beds on a boat by the pool (see “Etna boat h
     openViewer(next);
   }
 
+  // ====== KEYBOARD ======
   document.addEventListener("keydown", (e) => {
     const viewerOpen = document.getElementById("viewer")?.getAttribute("aria-hidden") === "false";
     const modalOpen = document.getElementById("galleryModal")?.getAttribute("aria-hidden") === "false";
@@ -771,6 +790,14 @@ It is also possible to rent three beds on a boat by the pool (see “Etna boat h
       if (e.key === "ArrowRight") viewerNext();
     }
   });
+
+  // ====== ESPONI FUNZIONI GLOBALI (importante per onclick="...") ======
+  window.openGallery = openGallery;
+  window.closeGallery = closeGallery;
+  window.openViewer = openViewer;
+  window.closeViewer = closeViewer;
+  window.viewerPrev = viewerPrev;
+  window.viewerNext = viewerNext;
 
     // ====== YEAR + PRICE (tuo codice) ======
     const LOCAL_PRICE_JSON = "price.json";
@@ -830,5 +857,6 @@ It is also possible to rent three beds on a boat by the pool (see “Etna boat h
   </script>
 </body>
 </html>
+
 
 
